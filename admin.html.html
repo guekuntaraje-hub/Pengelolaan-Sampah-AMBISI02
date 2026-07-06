@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<script>
+    // Taruh di awal script admin.html
+    var password = prompt("🔐 Masukkan password admin:");
+    if (password !== "ambisi0202") {
+        alert("Password salah!");
+        document.body.innerHTML = "<h1 style='color:red;text-align:center;margin-top:50px;'>⛔ Akses Ditolak</h1>";
+        throw new Error("Akses ditolak");
+    }
+</script>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pengelolaan Sampah AMBISI02</title>
+    <style>
+        /* Desain Dark Mode Biar Nyaman di Mata Pas Muter Lapangan */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background-color: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .logo { width: 90px; border-radius: 50%; border: 3px solid #f9d342; margin-bottom: 10px; }
+        h1 { color: #f9d342; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        .subtitle { color: #a0a0a0; font-size: 14px; margin-top: 5px; }
+        
+        /* Kartu Info Saldo Kas */
+        .summary-box { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px; background: #262626; padding: 15px; border-radius: 10px; border: 1px solid #333; }
+        .summary-card { text-align: center; padding: 10px; }
+        .summary-card h3 { margin: 0; font-size: 13px; color: #a0a0a0; text-transform: uppercase; }
+        .summary-card p { margin: 5px 0 0 0; font-size: 18px; font-weight: bold; }
+        .total-masuk { color: #4caf50; }
+        .total-keluar { color: #f44336; }
+        .total-saldo { color: #f9d342; }
+        
+        /* Gaya Formulir Input Admin */
+        fieldset { border: 1px solid #444; border-radius: 10px; padding: 15px; margin-bottom: 25px; background-color: #222; }
+        legend { color: #f9d342; font-weight: bold; padding: 0 10px; font-size: 14px; text-transform: uppercase; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        label { font-size: 13px; color: #b0b0b0; margin-bottom: 5px; }
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #444; background-color: #2d2d2d; color: #fff; font-size: 14px; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #f9d342; outline: none; }
+        button { background-color: #f9d342; color: #121212; font-weight: bold; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 15px; text-transform: uppercase; transition: 0.2s; margin-top: 5px; }
+        button:hover { background-color: #e0be34; transform: scale(1.01); }
+        .btn-danger { background-color: #f44336; color: white; }
+        .btn-danger:hover { background-color: #d32f2f; }
+        .btn-success { background-color: #4caf50; color: white; }
+        .btn-success:hover { background-color: #388e3c; }
+        
+        /* Gaya Tabel Pantauan Pengurus */
+        .table-responsive { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+        th { background-color: #2d2d2d; color: #f9d342; padding: 12px 10px; border-bottom: 2px solid #444; text-transform: uppercase; }
+        td { padding: 12px 10px; border-bottom: 1px solid #333; }
+        tr:hover { background-color: #252525; }
+        .badge-masuk { color: #4caf50; font-weight: bold; }
+        .badge-keluar { color: #f44336; font-weight: bold; }
+        .btn-hapus { background:#f44336; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; }
+        .btn-hapus:hover { background:#d32f2f; }
+        
+        /* Filter */
+        .filter-box { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+        .filter-box select, .filter-box button { padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background-color: #2d2d2d; color: #fff; }
+        .filter-box button { background-color: #f9d342; color: #121212; font-weight: bold; border: none; cursor: pointer; }
+        .filter-box button:hover { background-color: #e0be34; }
+        .filter-box .btn-reset { background-color: #555; color: #fff; }
+        .filter-box .btn-reset:hover { background-color: #777; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Bagian Kepala Aplikasi -->
+    <div class="header">
+        <img src="GARDALOGO.png" alt="Logo AMBISI02" class="logo" onerror="this.style.display='none'">
+        <h1>AMBISI02</h1>
+        <div class="subtitle">Sistem Informasi Pengelolaan Sampah RT 02</div>
+    </div>
+
+    <!-- Dasbor Ringkasan Kas (Real-time Pantauan Pengurus) -->
+    <div class="summary-box">
+        <div class="summary-card">
+            <h3>Total Iuran Masuk</h3>
+            <p class="total-masuk" id="totalMasukTxt">Rp 0</p>
+        </div>
+        <div class="summary-card">
+            <h3>Total Kas Keluar</h3>
+            <p class="total-keluar" id="totalKeluarTxt">Rp 0</p>
+        </div>
+        <div class="summary-card">
+            <h3>Saldo Kas</h3>
+            <p class="total-saldo" id="totalSaldoTxt">Rp 0</p>
+        </div>
+    </div>
+
+    <!-- PANEL ADMIN: Form Input Manual Data Lapangan -->
+    <fieldset>
+        <legend>Panel Input Admin</legend>
+        
+        <div class="form-group">
+            <label for="jenisTransaksi">Jenis Catatan:</label>
+            <select id="jenisTransaksi" onchange="aturFormulir()">
+                <option value="masuk">Iuran Warga Masuk (+)</option>
+                <option value="keluar">Operasional / Gaji Keluar (-)</option>
+            </select>
+        </div>
+
+        <!-- Bagian Input yang bisa berubah dinamis -->
+        <div id="formDinamis">
+            <div class="form-group">
+                <label for="namaWarga">Nama Warga / Pembayar:</label>
+                <input type="text" id="namaWarga" placeholder="Contoh: Pak A">
+            </div>
+            <div class="form-group">
+                <label for="noRumah">Nomor Rumah:</label>
+                <input type="text" id="noRumah" placeholder="Contoh: 11">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="nominal">Jumlah Uang (Rp):</label>
+            <input type="number" id="nominal" placeholder="Contoh: 20000">
+        </div>
+
+        <div class="form-group">
+            <label for="tanggal">Tanggal Catat:</label>
+            <input type="date" id="tanggal">
+        </div>
+
+        <button onclick="simpanDataManual()">Simpan Catatan</button>
+    </fieldset>
+
+    <!-- PANEL PANTUAN: Tabel Data Real-time -->
+    <fieldset>
+        <legend>Laporan Transaksi Bulanan</legend>
+        
+        <!-- Filter -->
+        <div class="filter-box">
+            <select id="filterBulan">
+                <option value="all">Semua Bulan</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+            </select>
+            <select id="filterTahun">
+                <option value="all">Semua Tahun</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+            </select>
+            <button onclick="filterData()">🔍 Filter</button>
+            <button class="btn-reset" onclick="resetFilter()">↺ Reset</button>
+            <button class="btn-success" onclick="exportExcel()">📊 Export Excel</button>
+        </div>
+        
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Keterangan / Warga</th>
+                        <th>No. Rmh</th>
+                        <th>Jumlah (Rp)</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelBodi">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #777;">Loading data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </fieldset>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // Kunci Firebase Punya GARDA AMBISI
+    var firebaseConfig = {
+        apiKey: "AIzaSyBSzl0skWvQkUUxJac3OGKzhyPOCrjC8p8",
+        authDomain: "pengolahan-sampah-ambisi02.firebaseapp.com",
+        databaseURL: "https://pengolahan-sampah-ambisi02-default-rtdb.firebaseio.com/",
+        projectId: "pengolahan-sampah-ambisi02",
+        storageBucket: "pengolahan-sampah-ambisi02.firebasestorage.app",
+        messagingSenderId: "633561513175",
+        appId: "1:633561513175:web:9ee24db9d6c69f69fbc492",
+        measurementId: "G-MX5ZNFE9X8"
+    };
+
+    // Hubungkan!
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+
+    // Setel tanggal otomatis ke hari ini
+    document.getElementById('tanggal').valueAsDate = new Date();
+
+    // Variabel buat nyimpen data asli
+    var dataAsli = {};
+
+    // Fungsi ganti kolom input pas admin milih jenis transaksi
+    window.aturFormulir = function() {
+        var jenis = document.getElementById("jenisTransaksi").value;
+        var areaDinamis = document.getElementById("formDinamis");
+        
+        if (jenis === "masuk") {
+            areaDinamis.innerHTML = `
+                <div class="form-group">
+                    <label for="namaWarga">Nama Warga / Pembayar:</label>
+                    <input type="text" id="namaWarga" placeholder="Contoh: Pak A">
+                </div>
+                <div class="form-group">
+                    <label for="noRumah">Nomor Rumah:</label>
+                    <input type="text" id="noRumah" placeholder="Contoh: 11">
+                </div>
+            `;
+        } else {
+            areaDinamis.innerHTML = `
+                <div class="form-group">
+                    <label for="keteranganKeluar">Keterangan Pengeluaran:</label>
+                    <input type="text" id="keteranganKeluar" placeholder="Contoh: Gaji Pengangkut Sampah">
+                </div>
+            `;
+        }
+    }
+
+    // FUNGSI UTAMA: Kirim data ke database online
+    window.simpanDataManual = function() {
+        var jenis = document.getElementById("jenisTransaksi").value;
+        var nominal = parseInt(document.getElementById("nominal").value);
+        var tanggal = document.getElementById("tanggal").value;
+
+        if (!nominal || !tanggal) {
+            alert("⚠️ Jumlah Uang & Tanggal jangan dikosongin!");
+            return;
+        }
+
+        if (nominal <= 0) {
+            alert("⚠️ Nominal harus lebih dari 0!");
+            return;
+        }
+
+        var dataTransaksi = {
+            jenis: jenis,
+            nominal: nominal,
+            tanggal: tanggal,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+
+        if (jenis === "masuk") {
+            var nama = document.getElementById("namaWarga");
+            var noRumah = document.getElementById("noRumah");
+            dataTransaksi.nama = nama ? nama.value || "Warga Anonim" : "Warga Anonim";
+            dataTransaksi.noRumah = noRumah ? noRumah.value || "-" : "-";
+        } else {
+            var keterangan = document.getElementById("keteranganKeluar");
+            dataTransaksi.nama = keterangan ? keterangan.value || "Pengeluaran" : "Pengeluaran";
+            dataTransaksi.noRumah = "-";
+        }
+
+        // Dorong masuk ke Firebase
+        db.ref('transaksi_sampah').push(dataTransaksi)
+            .then(() => {
+                alert("✅ Data berhasil disimpan!");
+                // Reset form
+                document.getElementById("nominal").value = "";
+                if (document.getElementById("namaWarga")) document.getElementById("namaWarga").value = "";
+                if (document.getElementById("noRumah")) document.getElementById("noRumah").value = "";
+                if (document.getElementById("keteranganKeluar")) document.getElementById("keteranganKeluar").value = "";
+            })
+            .catch((error) => {
+                alert("❌ Gagal nyimpen! Error: " + error.message);
+            });
+    }
+
+    // FUNGSI HAPUS DATA
+    window.hapusData = function(key) {
+        if (confirm("⚠️ Yakin mau hapus data ini? Data bakal ilang permanen!")) {
+            db.ref('transaksi_sampah/' + key).remove()
+                .then(() => {
+                    alert("🗑️ Data berhasil dihapus!");
+                })
+                .catch((error) => {
+                    alert("❌ Gagal hapus: " + error.message);
+                });
+        }
+    }
+
+    // FUNGSI TAMPIL DATA
+    function tampilkanData(data) {
+        var tabelBodi = document.getElementById("tabelBodi");
+        var totalMasukTxt = document.getElementById("totalMasukTxt");
+        var totalKeluarTxt = document.getElementById("totalKeluarTxt");
+        var totalSaldoTxt = document.getElementById("totalSaldoTxt");
+        
+        if(!tabelBodi) return;
+        
+        tabelBodi.innerHTML = ""; 
+        var totalMasuk = 0;
+        var totalKeluar = 0;
+
+        if (!data) {
+            tabelBodi.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #777;">Belum ada data.</td></tr>`;
+            if(totalMasukTxt) totalMasukTxt.innerText = "Rp 0";
+            if(totalKeluarTxt) totalKeluarTxt.innerText = "Rp 0";
+            if(totalSaldoTxt) totalSaldoTxt.innerText = "Rp 0";
+            return;
+        }
+
+        var keys = Object.keys(data).reverse();
+
+        if (keys.length === 0) {
+            tabelBodi.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #777;">Belum ada data.</td></tr>`;
+            if(totalMasukTxt) totalMasukTxt.innerText = "Rp 0";
+            if(totalKeluarTxt) totalKeluarTxt.innerText = "Rp 0";
+            if(totalSaldoTxt) totalSaldoTxt.innerText = "Rp 0";
+            return;
+        }
+
+        keys.forEach(function(key) {
+            var item = data[key];
+            var baris = document.createElement("tr");
+            var tglFormat = item.tanggal ? item.tanggal.split("-").reverse().slice(0,2).join("/") : "-";
+
+            if (item.jenis === "masuk") {
+                totalMasuk += item.nominal;
+                baris.innerHTML = `
+                    <td>${tglFormat}</td>
+                    <td>${item.nama || "Warga Anonim"}</td>
+                    <td>${item.noRumah || "-"}</td>
+                    <td style="color: #4CAF50; font-weight: bold;">+Rp ${item.nominal.toLocaleString('id-ID')}</td>
+                    <td><button class="btn-hapus" onclick="hapusData('${key}')">🗑️ Hapus</button></td>
+                `;
+            } else {
+                totalKeluar += item.nominal;
+                baris.innerHTML = `
+                    <td>${tglFormat}</td>
+                    <td><span style="color: #f44336;">[KAS KELUAR]</span> ${item.nama || "Pengeluaran"}</td>
+                    <td>${item.noRumah || "-"}</td>
+                    <td style="color: #f44336; font-weight: bold;">-Rp ${item.nominal.toLocaleString('id-ID')}</td>
+                    <td><button class="btn-hapus" onclick="hapusData('${key}')">🗑️ Hapus</button></td>
+                `;
+            }
+            tabelBodi.appendChild(baris);
+        });
+
+        var saldo = totalMasuk - totalKeluar;
+        if(totalMasukTxt) totalMasukTxt.innerText = "Rp " + totalMasuk.toLocaleString('id-ID');
+        if(totalKeluarTxt) totalKeluarTxt.innerText = "Rp " + totalKeluar.toLocaleString('id-ID');
+        if(totalSaldoTxt) {
+            totalSaldoTxt.innerText = "Rp " + saldo.toLocaleString('id-ID');
+            totalSaldoTxt.style.color = saldo >= 0 ? "#4caf50" : "#f44336";
+        }
+    }
+
+    // FUNGSI FILTER
+    window.filterData = function() {
+        var bulan = document.getElementById("filterBulan").value;
+        var tahun = document.getElementById("filterTahun").value;
+        
+        if (!dataAsli) {
+            alert("⚠️ Data belum dimuat!");
+            return;
+        }
+        
+        var dataFilter = {};
+        var keys = Object.keys(dataAsli);
+        
+        keys.forEach(function(key) {
+            var item = dataAsli[key];
+            if (item.tanggal) {
+                var tglSplit = item.tanggal.split("-");
+                var thn = tglSplit[0];
+                var bln = tglSplit[1];
+                
+                var cocokBulan = (bulan === "all" || bln === bulan);
+                var cocokTahun = (tahun === "all" || thn === tahun);
+                
+                if (cocokBulan && cocokTahun) {
+                    dataFilter[key] = item;
+                }
+            }
+        });
+        
+        tampilkanData(dataFilter);
+    }
+
+    window.resetFilter = function() {
+        document.getElementById("filterBulan").value = "all";
+        document.getElementById("filterTahun").value = "all";
+        tampilkanData(dataAsli);
+    }
+
+    // FUNGSI EXPORT EXCEL
+    window.exportExcel = function() {
+        var tabel = document.querySelector("table");
+        var html = tabel.outerHTML;
+        var style = "<style>th{background:#2d2d2d;color:#f9d342;padding:12px;}td{padding:12px;border-bottom:1px solid #333;}</style>";
+        var blob = new Blob([style + html], {type: "application/vnd.ms-excel"});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "Laporan_AMBISI02_" + new Date().toISOString().slice(0,10) + ".xls";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // FUNGSI PANTUAN: Narik data otomatis
+    db.ref('transaksi_sampah').on('value', function(snapshot) {
+        dataAsli = snapshot.val();
+        tampilkanData(dataAsli);
+    }, function(error) {
+        console.error("Error baca data:", error);
+        document.getElementById("tabelBodi").innerHTML = `<tr><td colspan="5" style="text-align: center; color: #f44336;">❌ Gagal load data: ${error.message}</td></tr>`;
+    });
+
+    // Inisialisasi form
+    window.aturFormulir();
+</script>
+
+</body>
+</html>
